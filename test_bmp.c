@@ -1,6 +1,9 @@
 #include "bmp.h"
+#include "ip_lib.h"
+#include "ip_lib.c"
 #include <math.h>
 #include <stdio.h>
+
 
 Bitmap * fractal(int hxres, int hyres)
 {
@@ -34,8 +37,11 @@ Bitmap * fractal(int hxres, int hyres)
 }
 
 int main(){
-    Bitmap * b = fractal(2000,2000);
-    bm_save(b,"mandelbrot.bmp");
-    bm_free(b);
+    // Bitmap * b = fractal(2000,2000);
+    // bm_save(b,"mandelbrot.bmp");
+    // bm_free(b);
+
+    ip_mat *mia = ip_mat_create(200, 200, 3, 4.5);
+
     return 0;
 }
