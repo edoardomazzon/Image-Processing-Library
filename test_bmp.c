@@ -37,20 +37,14 @@ Bitmap * fractal(int hxres, int hyres) {
 }
 
 int main(){
+    // Implementazione originale:
     // Bitmap * b = fractal(2000,2000);
     // bm_save(b,"mandelbrot.bmp");
     // bm_free(b);
-    
-    ip_mat *mia = ip_mat_create(5, 5, 3, 4.5);
-    
-    //ip_mat_show_stats(mia);
-    ip_mat_init_random(mia, 130., 175.);
-    ip_mat_show(mia);
-    ip_mat *miasubset = ip_mat_subset(mia, 0, 3, 1, 3);
-    ip_mat_show(miasubset);
-    
-    ip_mat_free(mia);
-    ip_mat_free(miasubset);
-    
+
+    ip_mat *prova = create_gaussian_filter(5, 5, 1, 2.0);
+    ip_mat_show(prova);
+
+        
     return 0;
 }
