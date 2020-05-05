@@ -3,10 +3,10 @@
 #include "ip_lib.c"
 #include <math.h>
 #include <stdio.h>
+#include <assert.h>
 
 
-Bitmap * fractal(int hxres, int hyres)
-{
+Bitmap * fractal(int hxres, int hyres) {
     /* Code adapted from http://www.physics.emory.edu/faculty/weeks/software/mand.html */
 
     Bitmap * b = bm_create(hxres,hyres);
@@ -40,8 +40,17 @@ int main(){
     // Bitmap * b = fractal(2000,2000);
     // bm_save(b,"mandelbrot.bmp");
     // bm_free(b);
-
-    ip_mat *mia = ip_mat_create(200, 200, 3, 4.5);
-
+    
+    ip_mat *mia = ip_mat_create(5, 5, 3, 4.5);
+    
+    //ip_mat_show_stats(mia);
+    ip_mat_init_random(mia, 130., 175.);
+    ip_mat_show(mia);
+    ip_mat *miasubset = ip_mat_subset(mia, 0, 3, 1, 3);
+    ip_mat_show(miasubset);
+    
+    ip_mat_free(mia);
+    ip_mat_free(miasubset);
+    
     return 0;
 }

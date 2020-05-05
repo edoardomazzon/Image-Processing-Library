@@ -7,6 +7,7 @@
 #include "bmp.h"
 #include <math.h>
 #include <time.h>
+#include <assert.h>
 
 void ip_mat_show(ip_mat * t){
     unsigned int i,l,j;
@@ -23,12 +24,11 @@ void ip_mat_show(ip_mat * t){
     }
 }
 
-
 void ip_mat_show_stats(ip_mat * t){
     unsigned int k;
-
+    
     compute_stats(t);
-
+    
     for(k=0;k<t->k;k++){
         printf("Channel %d:\n", k);
         printf("\t Min: %f\n", t->stat[k].min);
@@ -36,7 +36,6 @@ void ip_mat_show_stats(ip_mat * t){
         printf("\t Mean: %f\n", t->stat[k].mean);
     }
 }
-
 
 ip_mat * bitmap_to_ip_mat(Bitmap * img){
     unsigned int i=0,j=0;
@@ -101,57 +100,54 @@ float get_normal_random(){
     float y1 = ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
     float y2 = ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
     return cos(2*PI*y2)*sqrt(-2.*log(y1));
-
 }
 
-ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) {
-    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat));
+ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) {    
+    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat)+sizeof(stats)*k);
 
-    // Inizializzo la matrice con dimensioni h w e k
+    /* Inizializzo la matrice con dimensioni h w e k */
     miamatrice->h = h;
     miamatrice->w = w;
-    miamatrice->h = h;
-
-    // Ogni elemento è inizializzato a v.
-    miamatrice->data = (float***)malloc(sizeof(float**));
+    miamatrice->k = k;
 
     int i,j,l;
 
-    miamatrice->data=(float ***)malloc(sizeof(float ***)*h);
-    for(i=0;i<h;i++)
-    {
-        miamatrice->data[i]=(float **)malloc(sizeof(int*)*w);
-        for(j=0;j<w;j++)
-        {
+    miamatrice->data=(float ***)malloc(sizeof(float **)*h);
+    for(i=0;i<h;i++){
+        miamatrice->data[i]=(float **)malloc(sizeof(float*)*w);
+        for(j=0;j<w;j++){
             miamatrice->data[i][j]=(float *)malloc(sizeof(float)*k);
         }
     }
-    for(i=0;i<h;i++)
-    {
-        for(j=0;j<w;j++)
-        {
-            for(l=0;l<k;l++)
-            {
+    for(i=0;i<h;i++){
+        for(j=0;j<w;j++){
+            for(l=0;l<k;l++){
                 miamatrice->data[i][j][l] = v;
             }
         }
     }
 
-    // creo un vettore di stats per contenere le statische sui singoli canali
-    miamatrice->stat = (stats*)malloc(sizeof(stats));
-    /*miamatrice->stat->min = v;
-    miamatrice->stat->max = v;
-    miamatrice->stat->mean = v;*/
-
+    /* Creo un vettore di stats per contenere le statische sui singoli canali */
+    
+    miamatrice->stat = (stats*)malloc(sizeof(stats)*k);
+    if(miamatrice==NULL){
+        printf("Errore malloc create stat");
+        exit(1);
+    }
+    /* Riempio i k-esimi stat con le statistiche iniziali, cioè v */
+    for(int x = 0; x < k; x++){
+        (miamatrice->stat+x)->min = v;
+        (miamatrice->stat+x)->max = v;
+        (miamatrice->stat+x)->mean = v;
+    }
     return miamatrice;
 }
 
 void ip_mat_free(ip_mat *a) {
-    // libero la stat
-    for(int x=0; x<a->h; x++) {
-        free(a->stat+x);
-    }
-    // libero data
+
+    free(a->stat);
+    
+    /* Libero t->data */
     for(int i = 0; i< a->h; i++)
     {
         for (int j = 0; j< a->w; j++)
@@ -159,53 +155,44 @@ void ip_mat_free(ip_mat *a) {
 
         free(a->data[i]);
     }
-    free(a); // libero la struttura
+    free(a); 
+    /* Libero l'intera struct ip_mat */
 }
 
-/* Restituisce il valore in posizione i,j,k */
-float get_val(ip_mat * a, unsigned int i,unsigned int j,unsigned int k) {
-    return a->data[i][j][k];
-}
-
-/* Setta il valore in posizione i,j,k a v*/
-void set_val(ip_mat * a, unsigned int i,unsigned int j,unsigned int k, float v) {
-    a->data[i][j][k];
-}
-
-/* Da completare */
-void compute_stats(ip_mat * t) {
-    int n_can = t->k;
-    /* Creo statarray come array di k stat, quindi una stat per colore */
-    stats *statarray = (stats*)malloc(sizeof(stats)*n_can);
-
-    float currentmin;
-    float currentmax;
-    for (int x=0; x<n_can; x++) {
+void compute_stats(ip_mat * t) {    
+    for (int x=0; x < t->k; x++) {
         float sum = 0;
         int nums = 0;
-        for(int i = 0; i < t->h;i++){
-            for(int j = 0; j < t->w;j++){
-                /* Confronta min e max */
-               sum += t->data[i][j][x];
-               nums++;
+        /* Dichiara qui max e min e ad essi associa il primo valore della matrice */
+        float currentmax = t->data[0][0][x];
+        float currentmin = t->data[0][0][x];
+        for(int i = 0; i < t->h; i++){
+            for(int j = 0; j < t->w; j++){
+                /* Confronta min e max e aumento i vari contatori per la media*/
+                nums++;
+                sum += t->data[i][j][x];
+                if(t->data[i][j][x] > currentmax){
+                    currentmax = t->data[i][j][x];
+                }
+                if(t->data[i][j][x] < currentmin){
+                    currentmin = t->data[i][j][x];
+                }
             }
         }
-        (statarray+x)->max = currentmax;
-    }
-
-    t->stat = statarray;
+        /* Associa massimo, minimo e media alla x-esima, cioè t->k-esima, stat */    
+        (t->stat+x)->max = currentmax;
+        (t->stat+x)->min = currentmin;
+        (t->stat+x)->mean = sum/nums;
+    }    
 }
 
 /* Ausiliare per ip_mat_init_random */
 double rand_normal(double mean, double stddev) {
-    srand(time(NULL));
-    static double n2 = 0.0;
-    static int n2_cached = 0;
-    if (!n2_cached)
-    {
+    double n2 = 0.0;
+    int n2_cached = 0;
+    if (!n2_cached) {
         double x, y, r;
-        do
-        {
+        do {
             x = 2.0*rand()/RAND_MAX - 1;
             y = 2.0*rand()/RAND_MAX - 1;
 
@@ -221,20 +208,64 @@ double rand_normal(double mean, double stddev) {
             return result;
         }
     }
-    else
-    {
+    else {
         n2_cached = 0;
         return n2*stddev + mean;
     }
 }
 /* Inizializza una ip_mat con dimensioni w h e k.
  * Ogni elemento è generato da una gaussiana con media mean e varianza var */
-void ip_mat_init_random(ip_mat * t, float mean, float var) { /* converti var in stddev (stddev=sqrt(var))*/
+/* Da correggere con mean e var */
+void ip_mat_init_random(ip_mat * t, float mean, float var) { 
+    srand(time(NULL));
     for(int i=0; i<t->h; i++){
         for(int j=0; j<t->w; j++){
             for(int l=0; l<t->k; l++){
-                t->data[i][j][l] = rand_normal(mean, sqrt(var));
+                t->data[i][j][l] = rand_normal(mean, sqrt(var));/* variazione standard = sqrt(varianza) */
             }
         }
     }
 }
+
+ip_mat * ip_mat_copy(ip_mat * in) {
+    ip_mat *newmat = ip_mat_create(in->h, in->w, in->k, 0.0);
+
+    for(int i=0; i < newmat->h; i++){
+        for(int j=0; j < newmat->w; j++){
+            for(int l=0; l < newmat->k; l++){
+                newmat->data[i][j][l] = in->data[i][j][l];
+            }
+        }
+    }
+    
+    compute_stats(newmat);
+    return newmat;
+}
+
+ip_mat * ip_mat_subset(ip_mat * t, unsigned int row_start, unsigned int row_end, unsigned int col_start, unsigned int col_end) {
+    unsigned int row = row_end-row_start;
+    unsigned int col = col_end-col_start;
+    
+    ip_mat *submat = ip_mat_create(row, col, t->k, 0.0);
+
+    int i, j, l;
+    int o = 0, p = 0, q = 0;
+    /* Riempio la sottomatrice da row_start a row_end e da col_start a col_end */
+    for(i=row_start;i<row_end;i++){
+        p=0;
+        for(j=col_start;j<col_end;j++){
+            q=0;
+            for(l=0;l<t->k;l++){
+                submat->data[o][p][q] = t->data[i][j][l];
+                q++;
+            }
+            p++;
+        }
+        o++;
+    }
+
+    compute_stats(submat);
+    return submat;
+}
+
+ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione);
