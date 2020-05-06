@@ -596,14 +596,14 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
             gaussian_filter->data[i][j][0]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
         }
     }
-    float sum = 0.;
+    float sum = 0.0;
     for(int i = 0; i < w; i++){
-        for(int j = 0; i < h; j++){
+        for(int j = 0; j < h; j++){
             sum += gaussian_filter->data[i][j][0];
         }
     }
     for(int i = 0; i < w; i++){
-        for(int j = 0; i < h; j++){
+        for(int j = 0; j < h; j++){
             //set_val(gaussian_filter, i, j, 0, ((gaussian_filter->data[i][j][0])/sum));
             gaussian_filter->data[i][j][0] = gaussian_filter->data[i][j][0] / sum;
         }
