@@ -209,42 +209,6 @@ void compute_stats(ip_mat * t) {
     }
 }
 
-/* Ausiliare per ip_mat_init_random */
-double rand_normal(double mean, double stddev) {
-    double n2;
-    int n2_cached;
-    double x;
-    double y; 
-    double r;
-    double result;
-    double n1;
-    double d;
-    n2 = 0.0;
-    n2_cached = 0;
-    if (!n2_cached) {
-        do {
-            x = 2.0*rand()/RAND_MAX - 1;
-            y = 2.0*rand()/RAND_MAX - 1;
-            r = x*x + y*y;
-        }
-        while (r == 0.0 || r > 1.0);
-        {
-            d = sqrt(-2.0*log(r)/r);
-            n1 = x*d;
-            n2 = y*d;
-            result = n1*stddev + mean;
-            n2_cached = 1;
-            return result;
-        }
-    }
-    else {
-        n2_cached = 0;
-        return n2*stddev + mean;
-    }
-}
-/* Inizializza una ip_mat con dimensioni w h e k.
- * Ogni elemento è generato da una gaussiana con media mean e varianza var */
-/* Da correggere con mean e var */
 void ip_mat_init_random(ip_mat * t, float mean, float var) { 
     unsigned int i;
     unsigned int j;
@@ -253,7 +217,7 @@ void ip_mat_init_random(ip_mat * t, float mean, float var) {
     for(i=0; i<t->h; i++){
         for(j=0; j<t->w; j++){
             for(l=0; l<t->k; l++){
-                t->data[i][j][l] = rand_normal(mean, sqrt(var));/* variazione standard = sqrt(varianza) */
+                t->data[i][j][l] = (get_normal_random()-mean)/var;
             }
         }
     }
