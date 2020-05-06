@@ -21,6 +21,7 @@ void show_help(){
     printf("\n");
 }
 
+
 int main (int argc, char * argv[]) {
 
     char * fn_in_1;  /* file 1 */
@@ -130,6 +131,7 @@ int main (int argc, char * argv[]) {
         ip_mat_free(img);  /* libera la memoria da img */
         img = temp;
     }
+    printf("*** Image Processing Toolbox ***\n");
 
     ip_mat_free(input_img); /* libera la memoria dalla ip_mat contenente l'immagine di input */
 

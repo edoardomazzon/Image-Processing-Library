@@ -10,7 +10,9 @@
 #include <assert.h>
 
 void ip_mat_show(ip_mat * t){
-    unsigned int i,l,j;
+    unsigned int i;
+    unsigned int l;
+    unsigned int j;
     printf("Matrix of size %d x %d x %d (hxwxk)\n",t->h,t->w,t->k);
     for (l = 0; l < t->k; l++) {
         printf("Slice %d\n", l);
@@ -38,20 +40,28 @@ void ip_mat_show_stats(ip_mat * t){
 }
 
 ip_mat * bitmap_to_ip_mat(Bitmap * img){
-    unsigned int i=0,j=0;
+    unsigned int i;
+    unsigned int j;
+    ip_mat * out;
+    unsigned char R;
+    unsigned char G;
+    unsigned char B;
 
-    unsigned char R,G,B;
-
-    unsigned int h = img->h;
-    unsigned int w = img->w;
-
-    ip_mat * out = ip_mat_create(h, w,3,0);
+    unsigned int h; 
+    unsigned int w;
+    
+    h = img->h;
+    w = img->w;
+    i = 0;
+    j = 0;
+    
+    out = ip_mat_create(h, w,3,0);
 
     for (i = 0; i < h; i++)              /* rows */
     {
         for (j = 0; j < w; j++)          /* columns */
         {
-            bm_get_pixel(img, j,i,&R, &G, &B);
+            bm_get_pixel(img, j, i, &R, &G, &B);
             set_val(out,i,j,0,(float) R);
             set_val(out,i,j,1,(float) G);
             set_val(out,i,j,2,(float) B);
@@ -65,7 +75,8 @@ Bitmap * ip_mat_to_bitmap(ip_mat * t){
 
     Bitmap *b = bm_create(t->w,t->h);
 
-    unsigned int i, j;
+    unsigned int i;
+    unsigned int j;
     for (i = 0; i < t->h; i++)              /* rows */
     {
         for (j = 0; j < t->w; j++)          /* columns */
@@ -106,14 +117,17 @@ float get_normal_random(){
 /**** PARTE 1: TIPO DI DATI ip_mat E MEMORIA ****/
 
 ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) {    
-    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat)+sizeof(stats)*k);
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;    
+    unsigned int x;
+
+    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat)/*+sizeof(stats)*k */);
 
     /* Inizializzo la matrice con dimensioni h w e k */
     miamatrice->h = h;
     miamatrice->w = w;
     miamatrice->k = k;
-
-    int i,j,l;
 
     miamatrice->data=(float ***)malloc(sizeof(float **)*h);
     for(i=0;i<h;i++){
@@ -138,7 +152,7 @@ ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) 
         exit(1);
     }
     /* Riempio i k-esimi stat con le statistiche iniziali, cioè v */
-    for(int x = 0; x < k; x++){
+    for(x = 0; x < k; x++){
         (miamatrice->stat+x)->min = v;
         (miamatrice->stat+x)->max = v;
         (miamatrice->stat+x)->mean = v;
@@ -147,30 +161,36 @@ ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) 
 }
 
 void ip_mat_free(ip_mat *a) {
-
-    free(a->stat);
-    
+    unsigned int i;
+    unsigned int j;
     /* Libero t->data */
-    for(int i = 0; i< a->h; i++)
-    {
-        for (int j = 0; j< a->w; j++)
+    for(i = 0; i< a->h; i++) {
+        for (j = 0; j< a->w; j++) {
             free(a->data[i][j]);
-
+        }
         free(a->data[i]);
     }
-    free(a); 
-    /* Libero l'intera struct ip_mat */
+    free(a->data);
+    free(a->stat);
+    free(a);
 }
 
-void compute_stats(ip_mat * t) {    
-    for (int x=0; x < t->k; x++) {
-        float sum = 0;
-        int nums = 0;
+void compute_stats(ip_mat * t) {   
+    unsigned int x; 
+    int nums;
+    float sum;
+    float currentmax;
+    float currentmin;
+    unsigned int i;
+    unsigned int j;
+    for (x=0; x < t->k; x++) {        
+        sum = 0;
+        nums = 0;
         /* Dichiara qui max e min e ad essi associa il primo valore della matrice */
-        float currentmax = t->data[0][0][x];
-        float currentmin = t->data[0][0][x];
-        for(int i = 0; i < t->h; i++){
-            for(int j = 0; j < t->w; j++){
+        currentmax = t->data[0][0][x];
+        currentmin = t->data[0][0][x];
+        for(i = 0; i < t->h; i++){
+            for(j = 0; j < t->w; j++){
                 /* Confronta min e max e aumento i vari contatori per la media*/
                 nums++;
                 sum += t->data[i][j][x];
@@ -186,27 +206,33 @@ void compute_stats(ip_mat * t) {
         (t->stat+x)->max = currentmax;
         (t->stat+x)->min = currentmin;
         (t->stat+x)->mean = sum/nums;
-    }    
+    }
 }
 
 /* Ausiliare per ip_mat_init_random */
 double rand_normal(double mean, double stddev) {
-    double n2 = 0.0;
-    int n2_cached = 0;
+    double n2;
+    int n2_cached;
+    double x;
+    double y; 
+    double r;
+    double result;
+    double n1;
+    double d;
+    n2 = 0.0;
+    n2_cached = 0;
     if (!n2_cached) {
-        double x, y, r;
         do {
             x = 2.0*rand()/RAND_MAX - 1;
             y = 2.0*rand()/RAND_MAX - 1;
-
             r = x*x + y*y;
         }
         while (r == 0.0 || r > 1.0);
         {
-            double d = sqrt(-2.0*log(r)/r);
-            double n1 = x*d;
+            d = sqrt(-2.0*log(r)/r);
+            n1 = x*d;
             n2 = y*d;
-            double result = n1*stddev + mean;
+            result = n1*stddev + mean;
             n2_cached = 1;
             return result;
         }
@@ -220,10 +246,13 @@ double rand_normal(double mean, double stddev) {
  * Ogni elemento è generato da una gaussiana con media mean e varianza var */
 /* Da correggere con mean e var */
 void ip_mat_init_random(ip_mat * t, float mean, float var) { 
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
     srand(time(NULL));
-    for(int i=0; i<t->h; i++){
-        for(int j=0; j<t->w; j++){
-            for(int l=0; l<t->k; l++){
+    for(i=0; i<t->h; i++){
+        for(j=0; j<t->w; j++){
+            for(l=0; l<t->k; l++){
                 t->data[i][j][l] = rand_normal(mean, sqrt(var));/* variazione standard = sqrt(varianza) */
             }
         }
@@ -231,26 +260,35 @@ void ip_mat_init_random(ip_mat * t, float mean, float var) {
 }
 
 ip_mat * ip_mat_copy(ip_mat * in) {
-    ip_mat *newmat = ip_mat_create(in->h, in->w, in->k, 0.0);
-
-    for(int i=0; i < newmat->h; i++){
-        for(int j=0; j < newmat->w; j++){
-            for(int l=0; l < newmat->k; l++){
+    ip_mat *newmat;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    newmat = ip_mat_create(in->h, in->w, in->k, 0.0);
+    for(i=0; i < newmat->h; i++){
+        for(j=0; j < newmat->w; j++){
+            for(l=0; l < newmat->k; l++){
                 newmat->data[i][j][l] = in->data[i][j][l];
             }
         }
     }
-    
     compute_stats(newmat);
     return newmat;
 }
 
 ip_mat * ip_mat_subset(ip_mat * t, unsigned int row_start, unsigned int row_end, unsigned int col_start, unsigned int col_end) {
     /* Crea una nuova mat grande hxw dove h è la differenza tra le righe, w la differenza tra le colonne */
-    ip_mat *submat = ip_mat_create(row_end-row_start, col_end-col_start, t->k, 0.0);
-
-    int i, j, l; 
-    int o = 0, p = 0, q = 0;/* per scorrere la nuova matrice */
+    ip_mat *submat;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l; 
+    unsigned int o;
+    unsigned int p;
+    unsigned int q;/* per scorrere la nuova matrice */
+    submat = ip_mat_create(row_end-row_start, col_end-col_start, t->k, 0.0);
+    o = 0;
+    p = 0;
+    q = 0;
     /* Riempio la sottomatrice da row_start a row_end esclusa e da col_start a col_end esclusa */
     for(i=row_start;i<row_end;i++){
         p=0;
@@ -270,10 +308,16 @@ ip_mat * ip_mat_subset(ip_mat * t, unsigned int row_start, unsigned int row_end,
 }
 
 ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
+    ip_mat *out;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    unsigned int o;
+    unsigned int p;
+    unsigned int q;
     if(dimensione==0){
         if(a->k == b->k && a->w == b->w){
-            ip_mat *out=ip_mat_create((a->h+b->h), a->w, a->k, 0.0);
-            int i, j, l;
+            out = ip_mat_create((a->h+b->h), a->w, a->k, 0.0);
             for(i = 0; i < a->h; i++){
                 for(j = 0; j < a->w; j++){
                     for(l=0; l< a->k; l++){
@@ -281,7 +325,7 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
                     }
                 }
             }
-            int o = 0;
+            o = 0;
             for(i = a->h; i<(a->h + b->h); i++){
                 for(j = 0; j < b->w; j++){
                     for(l=0; l < b->k; l++){
@@ -300,8 +344,7 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
     }
     else if(dimensione==1){
         if(a->k == b->k && a->h == b->h) {
-            ip_mat *out=ip_mat_create(a->h, (a->w+b->w), a->k, 0.0);
-            int i, j, l;
+            out = ip_mat_create(a->h, (a->w+b->w), a->k, 0.0);
             for(i = 0; i < a->h; i++){
                 for(j = 0; j < a->w; j++){
                     for(l=0; l< a->k; l++){
@@ -309,7 +352,7 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
                     }
                 }
             }
-            int p = 0;
+            p = 0;
             for(i = 0; i < b->h; i++){
                 p=0;
                 for(j = a->w; j < (a->w + b->w); j++){
@@ -328,8 +371,7 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
     }
     else if(dimensione==2){
         if(a->h == b->h && a->w == b->w){
-            ip_mat *out=ip_mat_create(a->h, a->w, (a->k+b->k), 0.0);
-            int i, j, l;
+            out = ip_mat_create(a->h, a->w, (a->k+b->k), 0.0);
             for(i = 0; i < a->h; i++){
                 for(j = 0; j < a->w; j++){
                     for(l=0; l< a->k; l++){
@@ -337,7 +379,7 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
                     }
                 }
             }
-            int q = 0;
+            q = 0;
             for(i = 0; i < b->h; i++){
                 for(j = 0; j < b->w; j++){
                     q=0;
@@ -364,9 +406,12 @@ ip_mat * ip_mat_concat(ip_mat * a, ip_mat * b, int dimensione) {
 /**** PARTE 1: OPERAZIONI MATEMATICHE FRA IP_MAT ****/
 
 ip_mat * ip_mat_sum(ip_mat * a, ip_mat * b) {
+    ip_mat *sum;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
     if(a->h == b->h && a->w==b->w && a->k==b->k){
-        ip_mat *sum = ip_mat_create(a->h, a->w, a->k, 0.0);
-        int i, j, l;
+        sum = ip_mat_create(a->h, a->w, a->k, 0.0);
         for(i = 0; i < a->h; i++){
             for(j = 0; j < a->w; j++){
                 for(l=0; l< a->k; l++){
@@ -383,9 +428,12 @@ ip_mat * ip_mat_sum(ip_mat * a, ip_mat * b) {
 }
 
 ip_mat * ip_mat_sub(ip_mat * a, ip_mat * b) {
+    ip_mat *sub;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
     if(a->h == b->h && a->w==b->w && a->k==b->k){
-        ip_mat *sub = ip_mat_create(a->h, a->w, a->k, 0.0);
-        int i, j, l;
+        sub = ip_mat_create(a->h, a->w, a->k, 0.0);
         for(i = 0; i < a->h; i++){
             for(j = 0; j < a->w; j++){
                 for(l=0; l< a->k; l++){
@@ -402,10 +450,14 @@ ip_mat * ip_mat_sub(ip_mat * a, ip_mat * b) {
 }
 
 ip_mat * ip_mat_mul_scalar(ip_mat *a, float c){
-    ip_mat *mult=ip_mat_create(a->h, a->w, a->k, 0.0);
-    for(int i = 0; i < a->h; i++){
-        for(int j = 0; j < a->w; j++){
-            for(int l=0; l< a->k; l++){
+    ip_mat *mult;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    mult = ip_mat_create(a->h, a->w, a->k, 0.0);
+    for(i = 0; i < a->h; i++){
+        for(j = 0; j < a->w; j++){
+            for(l=0; l< a->k; l++){
                 mult->data[i][j][l] = a->data[i][j][l]*c;
             }
         }
@@ -414,10 +466,14 @@ ip_mat * ip_mat_mul_scalar(ip_mat *a, float c){
 }
 
 ip_mat *  ip_mat_add_scalar(ip_mat *a, float c) {
-    ip_mat *add=ip_mat_create(a->h, a->w, a->k, 0.0);
-    for(int i = 0; i < a->h; i++){
-        for(int j = 0; j < a->w; j++){
-            for(int l=0; l< a->k; l++){
+    ip_mat *add;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    add = ip_mat_create(a->h, a->w, a->k, 0.0);
+    for(i = 0; i < a->h; i++){
+        for(j = 0; j < a->w; j++){
+            for(l=0; l< a->k; l++){
                 add->data[i][j][l] = a->data[i][j][l]+c;
             }
         }
@@ -426,11 +482,15 @@ ip_mat *  ip_mat_add_scalar(ip_mat *a, float c) {
 }
 
 ip_mat * ip_mat_mean(ip_mat * a, ip_mat * b) {
+    ip_mat *mean;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
     if(a->h==b->h && a->w==b->w && a->k==b->k){
-        ip_mat *mean = ip_mat_create(a->h, a->w, a->k, 0.0);
-        for(int i = 0; i < a->h; i++){
-            for(int j = 0; j < a->w; j++){
-                for(int l=0; l< a->k; l++){
+        mean = ip_mat_create(a->h, a->w, a->k, 0.0);
+        for(i = 0; i < a->h; i++){
+            for(j = 0; j < a->w; j++){
+                for(l=0; l< a->k; l++){
                     mean->data[i][j][l] = (a->data[i][j][l]+b->data[i][j][l])/2;
                 }
             }
@@ -447,16 +507,22 @@ ip_mat * ip_mat_mean(ip_mat * a, ip_mat * b) {
 /**** PARTE 2: SEMPLICI OPERAZIONI SU IMMAGINI ****/
 
 ip_mat * ip_mat_to_gray_scale(ip_mat * in) {
-    ip_mat *bw = ip_mat_create(in->h, in->w, in->k, 0.0);
-    for(int i = 0; i < in->h; i++){
-        for(int j = 0; j < in->w; j++){
-            float sum = 0;
-            float cont = 0;
-            for(int l=0; l< in->k; l++){
+    ip_mat *bw;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    float sum;
+    float cont;
+    bw = ip_mat_create(in->h, in->w, in->k, 0.0);
+    for(i = 0; i < in->h; i++){
+        for(j = 0; j < in->w; j++){
+            sum = 0;
+            cont = 0;
+            for(l=0; l< in->k; l++){
                 cont++;
                 sum += in->data[i][j][l];
             }
-            for(int l=0; l< in->k; l++){
+            for(l=0; l< in->k; l++){
                 bw->data[i][j][l]=sum/cont;
             }
         }
@@ -465,11 +531,15 @@ ip_mat * ip_mat_to_gray_scale(ip_mat * in) {
 }
 
 ip_mat * ip_mat_blend(ip_mat * a, ip_mat * b, float alpha) {
+    ip_mat *c;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
     if(a->h == b->h && a->w == b->w && a->k == b->k){
-        ip_mat *c = ip_mat_create(a->h, a->w, a->k, 0.0);
-        for(int i = 0; i < a->h; i++){
-            for(int j = 0; j < a->w; j++){
-                for(int l=0; l< a->k; l++) {
+        c = ip_mat_create(a->h, a->w, a->k, 0.0);
+        for(i = 0; i < a->h; i++){
+            for(j = 0; j < a->w; j++){
+                for(l=0; l< a->k; l++) {
                     c->data[i][j][l] = alpha*(a->data[i][j][l]) + (1-alpha)*(b->data[i][j][l]);
                 }
             }
@@ -483,10 +553,14 @@ ip_mat * ip_mat_blend(ip_mat * a, ip_mat * b, float alpha) {
 }
 
 ip_mat * ip_mat_brighten(ip_mat * a, float bright) {
-    ip_mat *br = ip_mat_copy(a);
-    for(int i = 0; i < a->h; i++){
-        for(int j = 0; j < a->w; j++){
-            for(int l=0; l< a->k; l++) {
+    ip_mat *br;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    br = ip_mat_copy(a);
+    for(i = 0; i < a->h; i++){
+        for(j = 0; j < a->w; j++){
+            for(l=0; l< a->k; l++) {
                 if(br->data[i][j][l] + bright > 255.0){
                     br->data[i][j][l] = 255.0;
                 }
@@ -500,11 +574,15 @@ ip_mat * ip_mat_brighten(ip_mat * a, float bright) {
 }
 
 ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
-    ip_mat *out = ip_mat_copy(a);
+    ip_mat *out;
     float gauss_noise;
-    for(int i = 0; i < a->h; i++){
-        for(int j = 0; j < a->w; j++){
-            for(int l=0; l< a->k; l++) {
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    out = ip_mat_copy(a);
+    for(i = 0; i < a->h; i++){
+        for(j = 0; j < a->w; j++){
+            for(l=0; l< a->k; l++) {
                 gauss_noise = get_normal_random();
                 if(a->data[i][j][l] + (gauss_noise*amount) > 255.0){
                     out->data[i][j][l] = 255.0;
@@ -530,10 +608,13 @@ ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
 * pixel del filtro. Ritorna la somma di tutte le moltiplicazioni.
 */
 float get_convolved_value(ip_mat *filtro, ip_mat* sottomatrice, int canale){
-    float ris=0.0;
+    float ris;
+    unsigned int i;
+    unsigned int j;
+    ris=0.0;
     if(filtro->h == sottomatrice->h && filtro->w == sottomatrice->w){
-        for(int i = 0; i < filtro->h; i++){
-            for(int j = 0; j < filtro->w; j++){
+        for(i = 0; i < filtro->h; i++){
+            for(j = 0; j < filtro->w; j++){
                 ris += (sottomatrice->data[i][j][canale]) * (filtro->data[i][j][0]);
             }
         }
@@ -549,8 +630,18 @@ float get_convolved_value(ip_mat *filtro, ip_mat* sottomatrice, int canale){
  * La funzione restituisce un ip_mat delle stesse dimensioni di "a".
  * */
 ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
+    int pad;
+    unsigned int o;
+    unsigned int p;
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    ip_mat *convolved;
+    ip_mat *auxsubset;
     if(a->h >= f->h || a->w >= f->w || a->k >= f->k){
-        int pad = ((f->h)-1)/2; /* Calcolo il padding in base alle dimensioni del filtro */
+        /* Calcolo il padding in base alle dimensioni del filtro */
+        pad = ((f->h)-1)/2; 
+        /* Calcolo il padding in base alle dimensioni del filtro */
         /* 
         * Le dimensioni della convolved sono:
         * 
@@ -562,9 +653,9 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
         * Altezza H convolved + pad
         * Larghezza W convolved + pad
         */
-        ip_mat *convolved = ip_mat_create((a->h - (f->h - 1)), (a-> w - (f->w - 1)), a->k, 0.0);
-        int o=0, p=0;
-
+        convolved = ip_mat_create((a->h - (f->h - 1)), (a-> w - (f->w - 1)), a->k, 0.0);
+        o = 0;
+        p = 0;
         /*
         * In questi cicli innestati scorriamo il filtro sull'intera matrice a
         * e assegnamo ad ogni canale di ogni pixel di a il valore calcolato
@@ -572,15 +663,13 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
         * (ottenuta da ip_mat_subset) di dimensioni f->h x f->w e il canale corrente, 
         * indicizzato da l.
         */
-        for(int i = 0; i <= (a->h - f->h); i++){
+        for(i = 0; i <= (a->h - f->h); i++){
             p=0;
-            for(int j = 0; j <= (a->w - f->w); j++){
-                
-                ip_mat *auxsubset = ip_mat_subset(a, i, i+(f->h), j, j+(f->w));                
-                for(int l = 0; l < a->k; l++){     
+            for(j = 0; j <= (a->w - f->w); j++){
+                auxsubset = ip_mat_subset(a, i, i+(f->h), j, j+(f->w));                
+                for(l = 0; l < a->k; l++){     
                     /* Calcola la convoluzione del pixel [i][j] al canale l */               
                     convolved->data[o][p][l] = get_convolved_value(f, auxsubset, l);
-                    
                 }
                 p++;
                 /* Libera il subset ausiliare */
@@ -588,7 +677,7 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
             }
             o++;
         }
-
+        
         /* Effettua il padding dopo aver convoluto l'immagine */
         convolved = ip_mat_padding(convolved, pad, pad);
         return convolved;
@@ -602,13 +691,17 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
 }
 
 ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w) {
-    // fascia sopra e sotto
-    ip_mat *padding_orizzontale = ip_mat_create(pad_h, a->w, a->k, 0.0);
-    ip_mat *out = ip_mat_concat(padding_orizzontale, a, 0);
+    ip_mat *padding_orizzontale;
+    ip_mat *padding_verticale;
+    ip_mat *out;
+
+    /*fascia sopra e sotto*/
+    padding_orizzontale = ip_mat_create(pad_h, a->w, a->k, 0.0);
+    out = ip_mat_concat(padding_orizzontale, a, 0);
     out = ip_mat_concat(out, padding_orizzontale, 0);
 
-    // fascia destra e sinistra
-    ip_mat *padding_verticale = ip_mat_create(out->h, pad_w, out->k, 0.0);
+    /*fascia destra e sinistra*/    
+    padding_verticale = ip_mat_create(out->h, pad_w, out->k, 0.0);
     out = ip_mat_concat(padding_verticale, out, 1);
     out = ip_mat_concat(out, padding_verticale, 1);
     ip_mat_free(padding_orizzontale);
@@ -618,7 +711,8 @@ ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w) {
 }
 
 ip_mat * create_sharpen_filter(){
-    ip_mat *sharpen_filter = ip_mat_create(3, 3, 1, 0.0);
+    ip_mat *sharpen_filter;
+    sharpen_filter = ip_mat_create(3, 3, 1, 0.0);
     set_val(sharpen_filter, 0, 1, 0, -1.0);
     set_val(sharpen_filter, 1, 0, 0, -1.0);
     set_val(sharpen_filter, 1, 1, 0, 5.0);
@@ -628,13 +722,15 @@ ip_mat * create_sharpen_filter(){
 }
 
 ip_mat * create_edge_filter(){
-    ip_mat *edge_filter = ip_mat_create(3, 3, 1, -1.0);
+    ip_mat *edge_filter;
+    edge_filter = ip_mat_create(3, 3, 1, -1.0);
     set_val(edge_filter, 1, 1, 0, 8.0);
     return edge_filter;
 }
 
 ip_mat * create_emboss_filter(){
-    ip_mat *emboss_filter = ip_mat_create(3, 3, 1, 1.0);
+    ip_mat *emboss_filter;
+    emboss_filter = ip_mat_create(3, 3, 1, 1.0);
     set_val(emboss_filter, 0, 0, 0, -2.0);
     set_val(emboss_filter, 0, 1, 0, -1.0);
     set_val(emboss_filter, 0, 2, 0, 0.0);
@@ -645,13 +741,22 @@ ip_mat * create_emboss_filter(){
 }
 
 ip_mat * create_average_filter(int w, int h, int k){
-    float c = 1.0/(w*h);
-    ip_mat *average_filter = ip_mat_create(3, 3, k, c);
+    float c;
+    ip_mat *average_filter;
+    c = 1.0/(w*h);
+    average_filter = ip_mat_create(3, 3, k, c);
     return average_filter;
 }
 
 ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
-    int cx, cy, x, y;
+    int cx;
+    int cy;
+    int x;
+    int y;
+    int i;
+    int j;
+    float sum;
+    ip_mat *gaussian_filter;
     if(w%2 != 0 && h%2 != 0){
         cx = w/2;
         cy = h/2;
@@ -660,38 +765,47 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
         printf("Errore in create_gaussian_filter: il filtro ha dimensioni pari\n");
         exit(1);
     }
-    ip_mat *gaussian_filter = ip_mat_create(w, h, k, 0.0);
-    for(int i=0; i < w; i++){
+    gaussian_filter = ip_mat_create(w, h, k, 0.0);
+    for(i=0; i < w; i++){
         x=i-cx;
-        for(int j=0; j < h; j++){
+        for(j=0; j < h; j++){
             y=j-cy;
             gaussian_filter->data[i][j][0]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
         }
     }
-    float sum = 0.0;
-    for(int i = 0; i < w; i++){
-        for(int j = 0; j < h; j++){
+    sum = 0.0;
+    for(i = 0; i < w; i++){
+        for(j = 0; j < h; j++){
             sum += gaussian_filter->data[i][j][0];
         }
     }
-    for(int i = 0; i < w; i++){
-        for(int j = 0; j < h; j++){
-            //set_val(gaussian_filter, i, j, 0, ((gaussian_filter->data[i][j][0])/sum));
+    for(i = 0; i < w; i++){
+        for(j = 0; j < h; j++){
+            /* set_val(gaussian_filter, i, j, 0, ((gaussian_filter->data[i][j][0])/sum)); */
             gaussian_filter->data[i][j][0] = gaussian_filter->data[i][j][0] / sum;
         }
     }
     return gaussian_filter;
 }
 
-
-void rescale(ip_mat * t, float new_max){
+void rescale(ip_mat * t, float new_max) {
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    float minimo;
+    float massimo;
     compute_stats(t);
-    for(int i = 0; i < t->h; i++){
-        for(int j = 0; j < t->w; j++){
-            for(int l = 0; l < t->k; l++){      
-                float minimo = (t->stat+l)->min;
-                float massimo = (t->stat+l)->max;          
+    for(i = 0; i < t->h; i++){
+        for(j = 0; j < t->w; j++){
+            for(l = 0; l < t->k; l++){      
+                minimo = (t->stat+l)->min;
+                massimo = (t->stat+l)->max;          
                 t->data[i][j][l] = ((t->data[i][j][l] -  minimo)/(massimo - minimo))*new_max;
+                /* if(t->data[i][j][l] < 0){
+                    printf("Negativo\n");
+                    // Non viene mai stampato
+                } */
+                
             }
         }
     }
@@ -699,15 +813,18 @@ void rescale(ip_mat * t, float new_max){
 
 /* Nell'operazione di clamping i valori <low si convertono in low e i valori >high in high.*/
 void clamp(ip_mat * t, float low, float high){
-    for(int i = 0; i < t->h; i++){
-        for(int j = 0; j < t->w; j++){
-            for(int l = 0; l < t->k; l++){
-                // if(t->data[i][j][l] > 200){
-                //     t->data[i][j][l]+=50;
-                // }
-                // if(t->data[i][j][l] < 200){
-                //     t->data[i][j][l]-=120;
-                // }
+    unsigned int i;
+    unsigned int j;
+    unsigned int l;
+    for(i = 0; i < t->h; i++){
+        for(j = 0; j < t->w; j++){
+            for( l = 0; l < t->k; l++){
+                /* if(t->data[i][j][l] > 200){
+                    t->data[i][j][l]+=50;
+                }
+                if(t->data[i][j][l] < 200){
+                    t->data[i][j][l]-=120;
+                } */
                 if(t->data[i][j][l] < low){
                     t->data[i][j][l] = low;
                 }
