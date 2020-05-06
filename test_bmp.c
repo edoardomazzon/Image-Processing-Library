@@ -37,13 +37,21 @@ Bitmap * fractal(int hxres, int hyres) {
 }
 
 int main(){
-    // Implementazione originale:
-    // Bitmap * b = fractal(2000,2000);
-    // bm_save(b,"mandelbrot.bmp");
-    // bm_free(b);
+    Bitmap *immagine = bm_create(700, 464);
+    immagine = bm_load("flower.bmp");
 
-    ip_mat *prova = create_gaussian_filter(5, 5, 1, 2.0);
-    ip_mat_show(prova);
+    ip_mat *img = bitmap_to_ip_mat(immagine);
+    ip_mat *edge = create_edge_filter();
+
+    ip_mat *conv = ip_mat_convolve(img, edge);
+    rescale(conv, 255.0);
+    clamp(conv, 0.0, 255.0);
+
+    Bitmap *newimg = ip_mat_to_bitmap(conv);
+    bm_save(newimg, "ProvaEdge.bmp");
+    
+    ip_mat_show(edge);
+    ip_mat_free(edge);
 
         
     return 0;

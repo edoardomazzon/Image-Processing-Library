@@ -524,11 +524,81 @@ ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
 
 /**** PARTE 3: CONVOLUZIONE E FILTRI *****/
 
+/*
+* Dato un filtro, una sottomatrice delle stesse dimensioni del filtro e un canale,
+* applica il calcolo della convoluzione sul pixel della matrice e il corrispondente
+* pixel del filtro. Ritorna la somma di tutte le moltiplicazioni.
+*/
+float get_convolved_value(ip_mat *filtro, ip_mat* sottomatrice, int canale){
+    float ris=0.0;
+    if(filtro->h == sottomatrice->h && filtro->w == sottomatrice->w){
+        for(int i = 0; i < filtro->h; i++){
+            for(int j = 0; j < filtro->w; j++){
+                ris += (sottomatrice->data[i][j][canale]) * (filtro->data[i][j][0]);
+            }
+        }
+        return ris;
+    }
+    else{
+        printf("Errore in get_convolved_value : Il filtro e la sottomatrice hanno dimensioni h e w diverse \n");
+        exit(1);
+    }
+}
+
 /* Effettua la convoluzione di un ip_mat "a" con un ip_mat "f".
  * La funzione restituisce un ip_mat delle stesse dimensioni di "a".
  * */
 ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
-    return a;
+    if(a->h >= f->h || a->w >= f->w || a->k >= f->k){
+        int pad = ((f->h)-1)/2; /* Calcolo il padding in base alle dimensioni del filtro */
+        /* 
+        * Le dimensioni della convolved sono:
+        * 
+        * PRIMA DEL PADDING
+        * Altezza H convolved = Altezza H di a - (altezza H del filtro - 1)
+        * Larghezza W convolved = Larghezza W di a - (Larghezza W del filtro - 1)
+        *
+        * DOPO IL PADDING
+        * Altezza H convolved + pad
+        * Larghezza W convolved + pad
+        */
+        ip_mat *convolved = ip_mat_create((a->h - (f->h - 1)), (a-> w - (f->w - 1)), a->k, 0.0);
+        int o=0, p=0;
+
+        /*
+        * In questi cicli innestati scorriamo il filtro sull'intera matrice a
+        * e assegnamo ad ogni canale di ogni pixel di a il valore calcolato
+        * dalla get_convolved_value, che prende in ingresso il filtro, la sottomatrice
+        * (ottenuta da ip_mat_subset) di dimensioni f->h x f->w e il canale corrente, 
+        * indicizzato da l.
+        */
+        for(int i = 0; i <= (a->h - f->h); i++){
+            p=0;
+            for(int j = 0; j <= (a->w - f->w); j++){
+                
+                ip_mat *auxsubset = ip_mat_subset(a, i, i+(f->h), j, j+(f->w));                
+                for(int l = 0; l < a->k; l++){     
+                    /* Calcola la convoluzione del pixel [i][j] al canale l */               
+                    convolved->data[o][p][l] = get_convolved_value(f, auxsubset, l);
+                    
+                }
+                p++;
+                /* Libera il subset ausiliare */
+                ip_mat_free(auxsubset);               
+            }
+            o++;
+        }
+
+        /* Effettua il padding dopo aver convoluto l'immagine */
+        convolved = ip_mat_padding(convolved, pad, pad);
+        return convolved;
+    }
+    else{
+        printf("Errore in ip_mat_convolve : il filtro è più grande dell'immagine \n");
+        exit(1);
+    }
+
+    
 }
 
 ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w) {
@@ -541,6 +611,8 @@ ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w) {
     ip_mat *padding_verticale = ip_mat_create(out->h, pad_w, out->k, 0.0);
     out = ip_mat_concat(padding_verticale, out, 1);
     out = ip_mat_concat(out, padding_verticale, 1);
+    ip_mat_free(padding_orizzontale);
+    ip_mat_free(padding_verticale);
     
     return out;   
 }
@@ -556,7 +628,7 @@ ip_mat * create_sharpen_filter(){
 }
 
 ip_mat * create_edge_filter(){
-    ip_mat *edge_filter = ip_mat_create(3, 3, 1, -1);
+    ip_mat *edge_filter = ip_mat_create(3, 3, 1, -1.0);
     set_val(edge_filter, 1, 1, 0, 8.0);
     return edge_filter;
 }
@@ -611,17 +683,38 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
     return gaussian_filter;
 }
 
-/* Effettua una riscalatura dei dati tale che i valori siano in [0,new_max].
- * Utilizzate il metodo compute_stat per ricavarvi il min, max per ogni canale.
- *
- * I valori sono scalati tramite la formula valore-min/(max - min)
- *
- * Si considera ogni indice della terza dimensione indipendente, quindi l'operazione
- * di scalatura va ripetuta per ogni "fetta" della matrice 3D.
- * Successivamente moltiplichiamo per new_max gli elementi della matrice in modo da ottenere un range
- * di valori in [0,new_max].
- * */
-void rescale(ip_mat * t, float new_max);
+
+void rescale(ip_mat * t, float new_max){
+    compute_stats(t);
+    for(int i = 0; i < t->h; i++){
+        for(int j = 0; j < t->w; j++){
+            for(int l = 0; l < t->k; l++){      
+                float minimo = (t->stat+l)->min;
+                float massimo = (t->stat+l)->max;          
+                t->data[i][j][l] = ((t->data[i][j][l] -  minimo)/(massimo - minimo))*new_max;
+            }
+        }
+    }
+}
 
 /* Nell'operazione di clamping i valori <low si convertono in low e i valori >high in high.*/
-void clamp(ip_mat * t, float low, float high);
+void clamp(ip_mat * t, float low, float high){
+    for(int i = 0; i < t->h; i++){
+        for(int j = 0; j < t->w; j++){
+            for(int l = 0; l < t->k; l++){
+                // if(t->data[i][j][l] > 200){
+                //     t->data[i][j][l]+=50;
+                // }
+                // if(t->data[i][j][l] < 200){
+                //     t->data[i][j][l]-=120;
+                // }
+                if(t->data[i][j][l] < low){
+                    t->data[i][j][l] = low;
+                }
+                if(t->data[i][j][l] > high){
+                    t->data[i][j][l] = high;
+                }
+            }
+        }
+    }
+}
