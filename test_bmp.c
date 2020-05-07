@@ -6,106 +6,6 @@
 #include <assert.h>
 #include <string.h>
 
-
-// Bitmap * fractal(int hxres, int hyres) {
-//     /* Code adapted from http://www.physics.emory.edu/faculty/weeks/software/mand.html */
-
-//     Bitmap * b = bm_create(hxres,hyres);
-
-//     double x,xx,y,cx,cy;
-//     int iteration,hx,hy;
-//     int itermax = 100;
-//     double magnify=1.0;
-
-//     for (hy=0;hy<hyres;hy++)  {
-//         for (hx=0;hx<hxres;hx++)  {
-//             cx = (((float)hx)/((float)hxres)-0.5)/magnify*3.0-0.7;
-//             cy = (((float)hy)/((float)hyres)-0.5)/magnify*3.0;
-//             x = 0.0; y = 0.0;
-//             for (iteration=0;iteration<itermax;iteration++)  {
-//                 xx = x*x-y*y+cx;
-//                 y = 2.0*x*y+cy;
-//                 x = xx;
-//                 if (x*x+y*y>100.0)  iteration = 999999;
-//             }
-//             if (iteration<99999){
-//                 bm_set(b,hx, hy, bm_rgb(0,255,255));
-//             }
-//             else bm_set(b,hx, hy, bm_rgb(180,0,0));
-//         }
-//     }
-//     return b;
-// }
-
-// int main(){
-//     /*
-//     // Bitmap *immagine = bm_create(700, 464);
-//     // immagine = bm_load("flower.bmp");
-
-//     // ip_mat *img = bitmap_to_ip_mat(immagine);
-//     // ip_mat *edge = create_edge_filter();
-
-//     // ip_mat *filtroid = ip_mat_create(3, 3, 1, 0.0);
-//     // set_val(filtroid, 1, 1, 0, 1.0);
-
-
-//     // ip_mat *conv = ip_mat_convolve(img, edge);
-//     // ip_mat_show_stats(conv);
-//     // rescale(conv, 255.0);
-//     // clamp(conv, 0.0, 255.0);
-
-//     // Bitmap *newimg = ip_mat_to_bitmap(conv);
-//     // bm_save(newimg, "ProvaEdgeCustomized.bmp");
-
-//     // printf(" R: %f\n", get_val(conv, 20, 20, 0));
-//     // printf(" G: %f\n", get_val(conv, 20, 20, 1));
-//     // printf(" B: %f\n", get_val(conv, 20, 20, 2));
-    
-//     // printf(" R: %f\n", get_val(conv, 19, 19, 0));
-//     // printf(" G: %f\n", get_val(conv, 19, 19, 1));
-//     // printf(" B: %f\n", get_val(conv, 19, 19, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 19, 20, 0));
-//     // printf(" G: %f\n", get_val(conv, 19, 20, 1));
-//     // printf(" B: %f\n", get_val(conv, 19, 20, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 19, 21, 0));
-//     // printf(" G: %f\n", get_val(conv, 19, 21, 1));
-//     // printf(" B: %f\n", get_val(conv, 19, 21, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 20, 19, 0));
-//     // printf(" G: %f\n", get_val(conv, 20, 19, 1));
-//     // printf(" B: %f\n", get_val(conv, 20, 19, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 20, 21, 0));
-//     // printf(" G: %f\n", get_val(conv, 20, 21, 1));
-//     // printf(" B: %f\n", get_val(conv, 20, 21, 2));
-    
-//     // printf(" R: %f\n", get_val(conv, 21, 19, 0));
-//     // printf(" G: %f\n", get_val(conv, 21, 19, 1));
-//     // printf(" B: %f\n", get_val(conv, 21, 19, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 21, 20, 0));
-//     // printf(" G: %f\n", get_val(conv, 21, 20, 1));
-//     // printf(" B: %f\n", get_val(conv, 21, 20, 2));
-
-//     // printf(" R: %f\n", get_val(conv, 21, 21, 0));
-//     // printf(" G: %f\n", get_val(conv, 21, 21, 1));
-//     // printf(" B: %f\n", get_val(conv, 21, 21, 2));
-//     */
-
-//     // ip_mat *prova;
-//     // prova = ip_mat_create(3, 3, 3, 0.0);
-//     // ip_mat_show_stats(prova);
-//     // ip_mat_show(prova);
-//     // ip_mat_free(prova);
-
-        
-//     return 0;
-// }
-
-
-
 void show_help(){
     printf("*** Image Processing Toolbox ***\n");
     printf("\targ 1: input file name (img1) \n");
@@ -162,7 +62,6 @@ int main (int argc, char * argv[]) {
 	concat_images = atoi(argv[5]);
 	}
 
-
     if(argc>6){
         k_size = atoi(argv[6]);
     }
@@ -187,7 +86,7 @@ int main (int argc, char * argv[]) {
     else if (strcmp(operation, "blend") == 0) {
         Bitmap * c = bm_load(fn_in_2);
         ip_mat * img_b = bitmap_to_ip_mat(c);
-
+        ip_mat_free(img_b);
         img = ip_mat_blend(input_img, img_b, sigma); /* effettua il blending di due immagini */
 
         
@@ -225,21 +124,22 @@ int main (int argc, char * argv[]) {
             c = bm_load(fn_in_2);
             img_b = bitmap_to_ip_mat(c);
             temp = ip_mat_concat(input_img, img_b, 1);
-            
+            ip_mat_free(img_b);
             img_b = ip_mat_concat(temp, img, 1);
-            
+            ip_mat_free(temp);
             temp = img_b;
             bm_free(c);
         }else{
             temp = ip_mat_concat(input_img, img, 1); /* metti le due immagini vicine */
         }
-        
+        ip_mat_free(img);
         img = temp;
     }
-
+    /*ip_mat_free(input_img);*/
     b2 = ip_mat_to_bitmap(img); /* converti l'immagine di output in una bitmap */
 
- 
+    ip_mat_free(img);
+    ip_mat_free(filter);
 
     bm_save(b2, fn_out); /* salva la bitmap di output su file */
     bm_free(b2); /* libera la memoria dalla bitmap */

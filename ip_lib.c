@@ -102,7 +102,7 @@ void set_val(ip_mat * a, unsigned int i,unsigned int j,unsigned int k, float v){
     if(i<a->h && j<a->w &&k<a->k){
         a->data[i][j][k]=v;
     }else{
-        printf("Errore set_val!!!");
+        printf("Errore coordinate set_val!!!\n");
         exit(1);
     }
 }
@@ -122,7 +122,7 @@ ip_mat * ip_mat_create(unsigned int h, unsigned int w,unsigned  int k, float v) 
     unsigned int l;    
     unsigned int x;
 
-    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat)/*+sizeof(stats)*k */);
+    ip_mat *miamatrice = (ip_mat*)malloc(sizeof(ip_mat));
 
     /* Inizializzo la matrice con dimensioni h w e k */
     miamatrice->h = h;
@@ -164,7 +164,8 @@ void ip_mat_free(ip_mat *a) {
     unsigned int i;
     unsigned int j;
     /* Libero t->data */
-    for(i = 0; i< a->h; i++) {
+    if(a){
+        for(i = 0; i< a->h; i++) {
         for (j = 0; j< a->w; j++) {
             free(a->data[i][j]);
         }
@@ -173,6 +174,8 @@ void ip_mat_free(ip_mat *a) {
     free(a->data);
     free(a->stat);
     free(a);
+    }
+    
 }
 
 void compute_stats(ip_mat * t) {   
@@ -571,7 +574,8 @@ ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
 * applica il calcolo della convoluzione sul pixel della matrice e il corrispondente
 * pixel del filtro. Ritorna la somma di tutte le moltiplicazioni.
 */
-float get_convolved_value(ip_mat *filtro, ip_mat* sottomatrice, int canale){
+/*
+float get_convolved_value(ip_mat *filtro, float mat[][], int canale){
     float ris;
     unsigned int i;
     unsigned int j;
@@ -589,19 +593,26 @@ float get_convolved_value(ip_mat *filtro, ip_mat* sottomatrice, int canale){
         exit(1);
     }
 }
+*/
 
 /* Effettua la convoluzione di un ip_mat "a" con un ip_mat "f".
  * La funzione restituisce un ip_mat delle stesse dimensioni di "a".
  * */
-ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
+ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
     int pad;
+    float sum;
     unsigned int o;
     unsigned int p;
     unsigned int i;
     unsigned int j;
     unsigned int l;
+
+    unsigned int x;
+    unsigned int y;
+    unsigned int z;
+
     ip_mat *convolved;
-    ip_mat *auxsubset;
+    
     if(a->h >= f->h || a->w >= f->w || a->k >= f->k){
         /* Calcolo il padding in base alle dimensioni del filtro */
         pad = ((f->h)-1)/2; 
@@ -620,6 +631,9 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
         convolved = ip_mat_create((a->h - (f->h - 1)), (a-> w - (f->w - 1)), a->k, 0.0);
         o = 0;
         p = 0;
+        z = 0;
+        y = 0;
+        x = 0;
         /*
         * In questi cicli innestati scorriamo il filtro sull'intera matrice a
         * e assegnamo ad ogni canale di ogni pixel di a il valore calcolato
@@ -629,19 +643,37 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
         */
         for(i = 0; i <= (a->h - f->h); i++){
             p=0;
-            for(j = 0; j <= (a->w - f->w); j++){
-                auxsubset = ip_mat_subset(a, i, i+(f->h), j, j+(f->w));                
+            for(j = 0; j <= (a->w - f->w); j++){               
                 for(l = 0; l < a->k; l++){     
-                    /* Calcola la convoluzione del pixel [i][j] al canale l */               
-                    convolved->data[o][p][l] = get_convolved_value(f, auxsubset, l);
+                    sum = 0.0;
+                    for(x = i; x < (i + f->h); x++){
+                        o=0;
+                        for(y=j; y < (j + f->w); y++){
+                            p=0;
+                            for(z=0; z < f->k; z++){
+                                printf("X : %d\n", x);
+                                printf("Y : %d\n", y);
+                                printf("L : %d\n", l);
+                                printf("\n");
+                                printf("P : %d\n", p);
+                                printf("O : %d\n", o);
+                                printf("Z : %d\n", z);
+                                printf("\n");
+                                printf("\n");
+                                printf("\n");
+                                sum += (a->data[x][y][l]) * (f->data[p][o][z]);
+                            }
+                            o++;
+                        }
+                        p++;
+                    }
+
+                    set_val(convolved, x, y, l, sum);
                 }
                 p++;
-                /* Libera il subset ausiliare */
-                ip_mat_free(auxsubset);               
             }
             o++;
         }
-        
         /* Effettua il padding dopo aver convoluto l'immagine */
         convolved = ip_mat_padding(convolved, pad, pad);
         return convolved;
@@ -649,9 +681,7 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f) {
     else{
         printf("Errore in ip_mat_convolve : il filtro è più grande dell'immagine \n");
         exit(1);
-    }
-
-    
+    }   
 }
 
 ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w) {
