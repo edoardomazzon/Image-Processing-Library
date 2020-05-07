@@ -145,7 +145,7 @@ int main (int argc, char * argv[]) {
 
     ip_mat_free(img); /* libera la memoria da img */
 
-
+    
     ip_mat_free(filter); /* libera la memoria dal filtro */
     
 
@@ -155,33 +155,39 @@ int main (int argc, char * argv[]) {
     return 0; /* ciao a tutti!*/
 
 
-    // // //Bitmap *img;
+    // //Bitmap *img;
     // ip_mat* miamatrice;
     // ip_mat* filter;
-    // ip_mat* convolved;
-    // // // img = bm_create(94, 93);
-    // // // img = bm_load("flower2.bmp");
+    // ip_mat* concat;
+
+    // // img = bm_create(94, 93);
+    // // img = bm_load("flower2.bmp");
 
     
-    // miamatrice = ip_mat_create(3, 3, 3, 3.0);
+    // miamatrice = ip_mat_create(3, 3, 3, 1.0);
     
     // filter = create_edge_filter();
 
+    // concat = ip_mat_convolve(miamatrice, filter);
     
-    // convolved = ip_mat_convolve(miamatrice, filter);
-    // ip_mat_show(convolved);
 
-    // // // img = ip_mat_to_bitmap(convolved);
-    // // // bm_save(img, "provaconvoluzione.bmp");
 
-    // // // bm_free(img);
-    // ip_mat_free(convolved);
     // ip_mat_free(filter);
     // ip_mat_free(miamatrice);
-    
-    // return 0;
-
+    // ip_mat_free(concat);
 
     
+    // // concat = ip_mat_concat(miamatrice, filter, 1);
+    // //ip_mat_show(concat);
     
+    // // bm_free(img);
+    // // img = ip_mat_to_bitmap(convolved);
+    // // bm_save(img, "provanostromain.bmp");
+
+    // // bm_free(img);
+    // // ip_mat_free(concat);
+    // // ip_mat_free(filter);
+    
+    
+    //return 0;
 }
