@@ -661,6 +661,7 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
                                 printf("\n");
                                 printf("\n");
                                 printf("\n");
+                                
                                 sum += (a->data[x][y][l]) * (f->data[p][o][z]);
                             }
                             o++;
