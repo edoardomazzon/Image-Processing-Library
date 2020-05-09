@@ -158,6 +158,7 @@ void ip_mat_free(ip_mat *a) {
             free(a->data[i]);
         }
         free(a->data);
+        /* Libero a->stat e a stesso */
         free(a->stat);
         free(a);
     }
@@ -208,6 +209,7 @@ void ip_mat_init_random(ip_mat * t, float mean, float var) {
             }
         }
     }
+    compute_stats(t);
 }
 
 ip_mat * ip_mat_copy(ip_mat * in) {
@@ -372,6 +374,7 @@ ip_mat * ip_mat_sum(ip_mat * a, ip_mat * b) {
                 }
             }
         }
+        compute_stats(sum);
         return sum;
     }
     else{
@@ -394,6 +397,7 @@ ip_mat * ip_mat_sub(ip_mat * a, ip_mat * b) {
                 }
             }
         }
+        compute_stats(sub);
         return sub;
     }
     else{
@@ -415,6 +419,7 @@ ip_mat * ip_mat_mul_scalar(ip_mat *a, float c){
             }
         }
     }
+    compute_stats(mult);
     return mult;
 }
 
@@ -431,6 +436,7 @@ ip_mat *  ip_mat_add_scalar(ip_mat *a, float c) {
             }
         }
     }
+    compute_stats(add);
     return add;
 }
 
@@ -448,6 +454,7 @@ ip_mat * ip_mat_mean(ip_mat * a, ip_mat * b) {
                 }
             }
         }
+        compute_stats(mean);
         return mean;
     }
     else{
@@ -480,6 +487,7 @@ ip_mat * ip_mat_to_gray_scale(ip_mat * in) {
             }
         }
     }
+    compute_stats(bw);
     return bw;
 }
 
@@ -494,9 +502,16 @@ ip_mat * ip_mat_blend(ip_mat * a, ip_mat * b, float alpha) {
             for(j = 0; j < a->w; j++){
                 for(l=0; l< a->k; l++) {
                     c->data[i][j][l] = alpha*(a->data[i][j][l]) + (1-alpha)*(b->data[i][j][l]);
+                    if(c->data[i][j][l] > 255.0){
+                        c->data[i][j][l] = 255.0;
+                    }
+                    if(c->data[i][j][l] < 0.0){
+                        c->data[i][j][l] = 0.0;
+                    }
                 }
             }
         }
+        compute_stats(c);
         return c;
     }
     else{
@@ -508,6 +523,8 @@ ip_mat * ip_mat_blend(ip_mat * a, ip_mat * b, float alpha) {
 ip_mat * ip_mat_brighten(ip_mat * a, float bright) {
     ip_mat *br;
     br = ip_mat_add_scalar(a, bright);
+    clamp(br, 0.0, 255.0);
+    compute_stats(br);
     return br;
 }
 
@@ -534,6 +551,7 @@ ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
             }
         }
     }
+    compute_stats(out);
     return out;
 }
 
@@ -621,6 +639,7 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
         /* Effettua il padding dopo aver convoluto l'immagine */
         convolvedaux = ip_mat_padding(convolved, pad, pad);
         ip_mat_free(convolved);
+        compute_stats(convolvedaux);
         return convolvedaux;
     }
     else{
@@ -636,11 +655,12 @@ ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w){
     unsigned int o;
     unsigned int p;
     unsigned int q;
+    ip_mat *out;
 
     o = 0;
     p = 0;
     q = 0;
-    ip_mat *out;
+    
     out = ip_mat_create((pad_h * 2)+ a->h, (pad_w * 2)+a->w, a->k, 0.0);
     for(i=pad_h; i<=a->h; i++) {
         p=0;
@@ -654,6 +674,7 @@ ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w){
         }
         o++;
     }
+    compute_stats(out);
     return out;   
 }
 
@@ -665,6 +686,7 @@ ip_mat * create_sharpen_filter(){
     set_val(sharpen_filter, 1, 1, 0, 5.0);
     set_val(sharpen_filter, 1, 2, 0, -1.0);
     set_val(sharpen_filter, 2, 1, 0, -1.0);
+    compute_stats(sharpen_filter);
     return sharpen_filter;
 }
 
@@ -672,6 +694,7 @@ ip_mat * create_edge_filter(){
     ip_mat *edge_filter;
     edge_filter = ip_mat_create(3, 3, 1, -1.0);
     set_val(edge_filter, 1, 1, 0, 8.0);
+    compute_stats(edge_filter);
     return edge_filter;
 }
 
@@ -684,6 +707,7 @@ ip_mat * create_emboss_filter(){
     set_val(emboss_filter, 1, 0, 0, -1.0);
     set_val(emboss_filter, 2, 0, 0, 0.0);
     set_val(emboss_filter, 2, 2, 0, 2.0);
+    compute_stats(emboss_filter);
     return emboss_filter;
 }
 
@@ -692,6 +716,7 @@ ip_mat * create_average_filter(int w, int h, int k){
     ip_mat *average_filter;
     c = 1.0/(w*h);
     average_filter = ip_mat_create(3, 3, k, c);
+    compute_stats(average_filter);
     return average_filter;
 }
 
@@ -732,6 +757,7 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
             gaussian_filter->data[i][j][0] = gaussian_filter->data[i][j][0] / sum;
         }
     }
+    compute_stats(gaussian_filter);
     return gaussian_filter;
 }
 
@@ -748,11 +774,6 @@ void rescale(ip_mat * t, float new_max) {
                 minimo = (t->stat+l)->min;
                 massimo = (t->stat+l)->max;          
                 t->data[i][j][l] = ((t->data[i][j][l] -  minimo)/(massimo - minimo))*new_max;
-                /* if(t->data[i][j][l] < 0){
-                    printf("Negativo\n");
-                    // Non viene mai stampato
-                } */
-                
             }
         }
     }
@@ -766,12 +787,6 @@ void clamp(ip_mat * t, float low, float high){
     for(i = 0; i < t->h; i++){
         for(j = 0; j < t->w; j++){
             for( l = 0; l < t->k; l++){
-                /* if(t->data[i][j][l] > 200){
-                    t->data[i][j][l]+=50;
-                }
-                if(t->data[i][j][l] < 200){
-                    t->data[i][j][l]-=120;
-                } */
                 if(t->data[i][j][l] < low){
                     t->data[i][j][l] = low;
                 }
@@ -781,4 +796,5 @@ void clamp(ip_mat * t, float low, float high){
             }
         }
     }
+    compute_stats(t);
 }

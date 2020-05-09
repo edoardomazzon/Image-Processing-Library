@@ -44,6 +44,7 @@ int main (int argc, char * argv[]) {
     ip_mat * filter = NULL;
     ip_mat * img= NULL, * img_b= NULL;
     ip_mat * temp = NULL;
+    concat_images = 0;
 
     if(argc==1){
         show_help();
@@ -153,41 +154,4 @@ int main (int argc, char * argv[]) {
     bm_free(b2); /* libera la memoria dalla bitmap */
 
     return 0; /* ciao a tutti!*/
-
-
-    // //Bitmap *img;
-    // ip_mat* miamatrice;
-    // ip_mat* filter;
-    // ip_mat* concat;
-
-    // // img = bm_create(94, 93);
-    // // img = bm_load("flower2.bmp");
-
-    
-    // miamatrice = ip_mat_create(3, 3, 3, 1.0);
-    
-    // filter = create_edge_filter();
-
-    // concat = ip_mat_convolve(miamatrice, filter);
-    
-
-
-    // ip_mat_free(filter);
-    // ip_mat_free(miamatrice);
-    // ip_mat_free(concat);
-
-    
-    // // concat = ip_mat_concat(miamatrice, filter, 1);
-    // //ip_mat_show(concat);
-    
-    // // bm_free(img);
-    // // img = ip_mat_to_bitmap(convolved);
-    // // bm_save(img, "provanostromain.bmp");
-
-    // // bm_free(img);
-    // // ip_mat_free(concat);
-    // // ip_mat_free(filter);
-    
-    
-    //return 0;
 }
