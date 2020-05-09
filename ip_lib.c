@@ -1065,30 +1065,37 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
         exit(1);
     }
     
-    /* Inizializzazione della matrice  */
+    /* Inizializzazione della matrice filtro */
     gaussian_filter = ip_mat_create(w, h, k, 0.0);
     
     for(i=0; i < w; i++){
+        /* Calcoliamo la distanza x dalla cella centrale del filtro */
         x=i-cx;
         for(j=0; j < h; j++){
+            /* Calcoliamo la distanza y dalla cella centrale del filtro */
             y=j-cy;
             
             /*Calcoliamo il valore del filtro in base alla formula indicata nel file .pdf che illustra il progetto*/
             gaussian_filter->data[i][j][0]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
         }
     }
+    /* Inizializziamo sum */
     sum = 0.0;
+
     for(i = 0; i < w; i++){
         for(j = 0; j < h; j++){
+            /* Sommiamo tutti i valori delle celle del filtro */
             sum += gaussian_filter->data[i][j][0];
         }
     }
+
     for(i = 0; i < w; i++){
         for(j = 0; j < h; j++){
-            /* set_val(gaussian_filter, i, j, 0, ((gaussian_filter->data[i][j][0])/sum)); */
+            /* Dividiamo tutte le celle del filtro per "sum" */
             gaussian_filter->data[i][j][0] = gaussian_filter->data[i][j][0] / sum;
         }
     }
+    
     /* Aggiorniamo il vettore stats */
     compute_stats(gaussian_filter);
     return gaussian_filter;
@@ -1097,7 +1104,7 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
 /* Effettua una riscalatura dei dati tale che i valori siano in [0,new_max].
  * Utilizzate il metodo compute_stat per ricavarvi il min, max per ogni canale.
  *
- * I valori sono scalati tramite la formula valore-min/(max - min)
+ * I valori sono scalati tramite la formula (valore-min)/(max - min)
  *
  * Si considera ogni indice della terza dimensione indipendente, quindi l'operazione
  * di scalatura va ripetuta per ogni "fetta" della matrice 3D.
