@@ -1058,7 +1058,7 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
         cx = w/2;
         cy = h/2;
     } 
-    /*********************************************************************************************************************/
+    
     else{
         /* Errore nel caso in cui i parametri passati in input come parametro non siano legali per il metodo richiamato */
         printf("Errore in create_gaussian_filter: il filtro ha dimensioni pari\n");
@@ -1079,6 +1079,7 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
             gaussian_filter->data[i][j][0]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
         }
     }
+
     /* Inizializziamo sum */
     sum = 0.0;
 
@@ -1098,6 +1099,7 @@ ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
     
     /* Aggiorniamo il vettore stats */
     compute_stats(gaussian_filter);
+
     return gaussian_filter;
 }
 
@@ -1115,17 +1117,22 @@ void rescale(ip_mat * t, float new_max) {
     unsigned int i;
     unsigned int j;
     unsigned int l;
+
+    /* Definizione variabili per il calcolo della riscalatura */
     float minimo;
     float massimo;
+    
     /* Aggiorniamo il vettore stats */
     compute_stats(t);
+    
     for(i = 0; i < t->h; i++){
         for(j = 0; j < t->w; j++){
-            for(l = 0; l < t->k; l++){      
+            for(l = 0; l < t->k; l++){   
+                /* Inizializziamo "minimo" e "massimo" ai min e max del canale corrente */   
                 minimo = (t->stat+l)->min;
-                massimo = (t->stat+l)->max; 
-                /* Calcoliamo il valore di ciascun pixel in ciascun canale con la formula 
-                (valore-min)/(max - min)*/         
+                massimo = (t->stat+l)->max;
+                
+                /* Calcoliamo il valore di ciascun pixel in ciascun canale con la formula (valore-min)/(max - min)*/         
                 t->data[i][j][l] = ((t->data[i][j][l] -  minimo)/(massimo - minimo))*new_max;
             }
         }
@@ -1142,9 +1149,14 @@ void clamp(ip_mat * t, float low, float high){
     for(i = 0; i < t->h; i++){
         for(j = 0; j < t->w; j++){
             for( l = 0; l < t->k; l++){
+                /* Controlliamo che nel caso il valore del canale del pixel calcolato sia minore di low 
+                 * esso venga forzato a low */
                 if(t->data[i][j][l] < low){
                     t->data[i][j][l] = low;
                 }
+
+                /* Controlliamo che nel caso il valore del canale del pixel calcolato sia maggiore di high 
+                 * esso venga forzato a high */
                 if(t->data[i][j][l] > high){
                     t->data[i][j][l] = high;
                 }
