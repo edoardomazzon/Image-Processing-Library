@@ -923,18 +923,20 @@ ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w){
     unsigned int o;
     unsigned int p;
     unsigned int q;
-
+    
+    /* Dichiarazione matrice di ritorno*/
+    ip_mat *out;
+    
     /* Inizializziamo gli indici */
     o = 0;
     p = 0;
     q = 0;
     
-    /* Definizione e allocamento matrice di ritorno.
+    /* Allocamento matrice di ritorno.
      * Le dimensioni h e w saranno entrambe sommate a 2*grandezza del padding 
      * Inizializziamo la matrice di ritorno a 0.0 e ne riempiremo la sottomatrice
      * centrale con i valori della matrice originale su cui effettuare il padding. */
-    ip_mat *out;
-    out = ip_mat_create((pad_h * 2)+ a->h, (pad_w * 2)+a->w, a->k, 0.0);
+     out = ip_mat_create((pad_h * 2)+ a->h, (pad_w * 2)+a->w, a->k, 0.0);
     
     /* Riempiamo la sottomatrice centrale, quindi cominciamo ad iterarne l'altezza
      * a partire dalla misura del padding e arriviamo all'altezza effettiva di "a" */

@@ -1,5 +1,5 @@
 /*
- * Bitmap manipulation functions. See "bmp.h" for details. 
+ * Bitmap manipulation functions. See `bmp.h` for details.
  */
 #include <stdio.h>
 #include <stdlib.h>
