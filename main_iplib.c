@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ip_lib.h"
+#include "ip_lib.c"
 #include "bmp.h"
 
 void show_help(){
