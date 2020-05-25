@@ -3,6 +3,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "ip_lib.h"
 #include "bmp.h"
 
@@ -42,7 +43,7 @@ ip_mat * bitmap_to_ip_mat(Bitmap * img){
     unsigned int h = img->h;
     unsigned int w = img->w;
 
-    ip_mat * out = ip_mat_create(h, w,3,0);
+    ip_mat * out = ip_mat_create(h, w,3,0.0);
 
     for (i = 0; i < h; i++)              /* rows */
     {
@@ -54,8 +55,6 @@ ip_mat * bitmap_to_ip_mat(Bitmap * img){
             set_val(out,i,j,2,(float) B);
         }
     }
-
-    compute_stats(out);
 
     return out;
 }
@@ -78,7 +77,7 @@ Bitmap * ip_mat_to_bitmap(ip_mat * t){
 }
 
 float get_val(ip_mat * a, unsigned int i,unsigned int j,unsigned int k){
-    if(i<a->h && j<a->w &&k<a->k){
+    if(i<a->h && j<a->w &&k<a->k){  /* j>=0 and k>=0 and i>=0 is non sense*/
         return a->data[i][j][k];
     }else{
         printf("Errore get_val!!!");
@@ -95,14 +94,12 @@ void set_val(ip_mat * a, unsigned int i,unsigned int j,unsigned int k, float v){
     }
 }
 
-float get_normal_random(float media, float std){
-
+float get_normal_random(){
     float y1 = ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
     float y2 = ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
-    float num = cos(2*PI*y2)*sqrt(-2.*log(y1));
-
-    return media + num*std;
+    return cos(2*PI*y2)*sqrt(-2.*log(y1));
 }
+
 /**** PARTE 1: TIPO DI DATI ip_mat E MEMORIA ****/
 
 /* Inizializza una ip_mat con dimensioni h w e k. Ogni elemento è inizializzato a v.
@@ -165,8 +162,8 @@ void ip_mat_free(ip_mat *a) {
     /* Controlliamo che a non punti a NULL */
     if(a){
         /* Liberiamo la matrice data */
-        for(i = 0; i < a->h; i++) {
-            for (j = 0; j < a->w; j++) {
+        for(i = 0; i< a->h; i++) {
+            for (j = 0; j< a->w; j++) {
                 free(a->data[i][j]);
             }
             free(a->data[i]);
@@ -226,8 +223,8 @@ void compute_stats(ip_mat * t) {
 }
 
 /* Inizializza una ip_mat con dimensioni w h e k.
- * Ogni elemento è generato da una gaussiana con media mean e deviazione std */
-void ip_mat_init_random(ip_mat * t, float mean, float std) {
+ * Ogni elemento è generato da una gaussiana con media mean e varianza var */
+void ip_mat_init_random(ip_mat * t, float mean, float var) {
     /* Definizione indici */
     unsigned int i;
     unsigned int j;
@@ -237,8 +234,11 @@ void ip_mat_init_random(ip_mat * t, float mean, float std) {
     for(i=0; i<t->h; i++){
         for(j=0; j<t->w; j++){
             for(l=0; l<t->k; l++){
-                /* Inizializziamo ciascun valore della matrice ad un valore casuale gaussiano */
-                t->data[i][j][l] = (get_normal_random(mean, std));
+                /* Sottraiamo la media alla distribuzione normale generata da
+                 * get_normal_random e dividiamo il risultato per la nuova
+                 * varianza "var".
+                 */
+                t->data[i][j][l] = (get_normal_random()-mean)/var;
             }
         }
     }
@@ -300,7 +300,7 @@ ip_mat * ip_mat_subset(ip_mat * t, unsigned int row_start, unsigned int row_end,
 
     /* Riempiamo la sottomatrice da row_start a row_end esclusa e da col_start a col_end esclusa */
     for(i=row_start;i<row_end;i++){
-        p = 0;
+        p=0;
         for(j=col_start;j<col_end;j++){
             q=0;
             for(l=0;l<t->k;l++){
@@ -762,7 +762,7 @@ ip_mat * ip_mat_corrupt(ip_mat * a, float amount) {
         for(j = 0; j < a->w; j++){
             for(l=0; l< a->k; l++) {
                 /* Assegnamo a gauss_noise un valore ottenuto dalla distribuzione normale di get_normal_random */
-                gauss_noise = get_normal_random(0.0, 1.0);
+                gauss_noise = get_normal_random();
                 
                 /* Controlliamo che nel caso il valore del canale del pixel calcolato sia maggiore di 255 
                  * esso venga forzato a 255 */
@@ -812,8 +812,8 @@ float get_convolved_value(ip_mat *filtro, ip_mat *sottomatrice, int canale){
         for(i = 0; i < filtro->h; i++){
             for(j = 0; j < filtro->w; j++){
                 /* Sommiamo al valore di ritorno la moltiplicazione tra le corrispondenti celle
-                * della sottomatrice e del filtro */
-                ris += (sottomatrice->data[i][j][canale]) * (filtro->data[i][j][canale]);
+                 * della sottomatrice e del filtro */
+                ris += (sottomatrice->data[i][j][canale]) * (filtro->data[i][j][0]);
             }
         }
         return ris;
@@ -838,17 +838,17 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
     unsigned int p;
     
     /* Definizione variabili per il padding */
-    unsigned int pad;
+    int pad;
     
     /* Definizamo la ip_mat di supporto per evitare perdite di memoria (vedere riga 900) */
-    ip_mat *convolved;
     ip_mat *convolvedaux;
     
     /* Definizione di ip_mat ausiliari e di ritorno*/
+    ip_mat *convolved;
     ip_mat *auxsubset;
     
     /* Controlliamo che le dimensioni della matrice "a" siano maggiori o uguali a quelle del filtro */
-    if(a->h >= f->h && a->w >= f->w && a->k == f->k){
+    if(a->h >= f->h || a->w >= f->w || a->k >= f->k){
         /* Calcolo il padding in base alle dimensioni del filtro */
         pad = ((f->h)-1)/2;
         
@@ -861,16 +861,10 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
         * DOPO IL PADDING
         * Altezza H convolved + pad
         * Larghezza W convolved + pad
-        * 
-        * Utilizziamo la matrice ottenuta dal padding per calcolare la convoluzione
-        * e salvarne i risultati sulla matrice di ritorno "convolved" che avrà le
-        * stesse dimensioni della matrice in input "a"
         */
         
-        /* Inizializziamo la matrice di supporto ed effettuiamo il padding prima 
-         * di aver convoluto l'immagine */
-        convolved = ip_mat_create(a->h, a->w, a->k, 0.0);
-        convolvedaux = ip_mat_padding(a, pad, pad);
+        /* Inizializziamo la matrice di supporto */
+        convolvedaux = ip_mat_create((a->h - (f->h - 1)), (a-> w - (f->w - 1)), a->k, 0.0);
         
         /* Inizializziamo gli indici */
         o = 0;
@@ -881,24 +875,30 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
         * dalla get_convolved_value, che prende in ingresso il filtro, la sottomatrice
         * (ottenuta da ip_mat_subset) di dimensioni f->h x f->w e il canale corrente, 
         * indicizzato da l. */
-        for(i = 0; i < (a->h); i++){
+        for(i = 0; i <= (a->h - f->h); i++){
             p=0;
-            for(j = 0; j < (a->w); j++){ 
+            for(j = 0; j <= (a->w - f->w); j++){
                 /* Inizializziamo la sottomatrice auxsubset con le dimensioni del filtro
-                * a partire dai valori degli indici i e j appena iterati su "a" */
-                auxsubset = ip_mat_subset(convolvedaux, i, i+(f->h), j, j+(f->w));
-                for(l = 0; l < (a->k); l++){     
+                 * a partire dai valori degli indici i e j appena iterati su "a" */
+                auxsubset = ip_mat_subset(a, i, i+(f->h), j, j+(f->w));              
+                
+                for(l = 0; l < a->k; l++){     
                     /* Calcola la convoluzione del pixel [i][j] al canale l */               
-                    convolved->data[o][p][l] = get_convolved_value(f, auxsubset, l);
+                    convolvedaux->data[o][p][l] = get_convolved_value(f, auxsubset, l);
                 }
+                p++;
+                
                 /* Libera il subset ausiliare */
                 ip_mat_free(auxsubset);
-                p++;
             }
             o++;
         }
-    
+        
+        /* Effettua il padding dopo aver convoluto l'immagine */
+        convolved = ip_mat_padding(convolvedaux, pad, pad);
+        /* Liberiamo convolvedaux */
         ip_mat_free(convolvedaux);
+        
         /* Aggiorniamo il vettore stats */
         compute_stats(convolved);
         
@@ -906,14 +906,14 @@ ip_mat * ip_mat_convolve(ip_mat * a, ip_mat * f){
     }
     else{
         /* Errore nel caso in cui i parametri passati in input come parametro non siano legali per il metodo richiamato */
-        printf("Errore in ip_mat_convolve : le dimensioni del filtro e dell'immagine non sono compatibili \n");
+        printf("Errore in ip_mat_convolve : il filtro è più grande dell'immagine \n");
         exit(1);
     }    
 }
 
 /* Aggiunge un padding all'immagine. Il padding verticale è pad_h mentre quello
  * orizzontale è pad_w. */
-ip_mat * ip_mat_padding(ip_mat * a, unsigned int pad_h, unsigned int pad_w){
+ip_mat * ip_mat_padding(ip_mat * a, int pad_h, int pad_w){
     /* Definizione indici */
     unsigned int i;
     unsigned int j;
@@ -965,21 +965,16 @@ ip_mat * ip_mat_padding(ip_mat * a, unsigned int pad_h, unsigned int pad_w){
 
 /* Crea un filtro di sharpening */
 ip_mat * create_sharpen_filter(){
-    /* Definizione indice */
-    unsigned int l;
-
     /* Definizione e inizializzazione matrice di ritorno secondo gli standard definiti nella consegna */
     ip_mat *sharpen_filter;
-    sharpen_filter = ip_mat_create(3, 3, 3, 0.0);
+    sharpen_filter = ip_mat_create(3, 3, 1, 0.0);
     
-    for(l = 0; l < 3; l++) {
-        /* Settiamo i valori della nostra matrice a quelli del filtro di sharpening per ogni canale */
-        set_val(sharpen_filter, 0, 1, l, -1.0);
-        set_val(sharpen_filter, 1, 0, l, -1.0);
-        set_val(sharpen_filter, 1, 1, l, 5.0);
-        set_val(sharpen_filter, 1, 2, l, -1.0);
-        set_val(sharpen_filter, 2, 1, l, -1.0);
-    }    
+    /* Settiamo i valori della nostra matrice a quelli del filtro di sharpening */
+    set_val(sharpen_filter, 0, 1, 0, -1.0);
+    set_val(sharpen_filter, 1, 0, 0, -1.0);
+    set_val(sharpen_filter, 1, 1, 0, 5.0);
+    set_val(sharpen_filter, 1, 2, 0, -1.0);
+    set_val(sharpen_filter, 2, 1, 0, -1.0);
 
     /* Aggiorniamo il vettore stats */
     compute_stats(sharpen_filter);
@@ -989,17 +984,12 @@ ip_mat * create_sharpen_filter(){
 
 /* Crea un filtro per rilevare i bordi */
 ip_mat * create_edge_filter(){
-    /* Definizione indice */
-    unsigned int l;
-
     /* Definizione e inizializzazione matrice di ritorno secondo gli standard definiti nella consegna */
     ip_mat *edge_filter;
-    edge_filter = ip_mat_create(3, 3, 3, -1.0);
+    edge_filter = ip_mat_create(3, 3, 1, -1.0);
     
-    for(l = 0; l < 3; l++) {
-        /* Settiamo i valori della nostra matrice a quelli del filtro "edge" per ogni canale*/
-        set_val(edge_filter, 1, 1, l, 8.0);
-    }
+    /* Settiamo i valori della nostra matrice a quelli del filtro "edge" */
+    set_val(edge_filter, 1, 1, 0, 8.0);
     
     /* Aggiorniamo il vettore stats */
     compute_stats(edge_filter);
@@ -1009,22 +999,17 @@ ip_mat * create_edge_filter(){
 
 /* Crea un filtro per aggiungere profondità */
 ip_mat * create_emboss_filter(){
-    /* Definizione indice */
-    unsigned int l;
-
     /* Definizione e inizializzazione matrice di ritorno secondo gli standard definiti nella consegna */
     ip_mat *emboss_filter;
-    emboss_filter = ip_mat_create(3, 3, 3, 1.0);
+    emboss_filter = ip_mat_create(3, 3, 1, 1.0);
     
-    for(l = 0; l < 3; l++) {
-        /* Settiamo i valori della nostra matrice uguali a quelli del filtro "emboss" per ogni canale */
-        set_val(emboss_filter, 0, 0, l, -2.0);
-        set_val(emboss_filter, 0, 1, l, -1.0);
-        set_val(emboss_filter, 0, 2, l, 0.0);
-        set_val(emboss_filter, 1, 0, l, -1.0);
-        set_val(emboss_filter, 2, 0, l, 0.0);
-        set_val(emboss_filter, 2, 2, l, 2.0);
-    }
+    /* Settiamo i valori della nostra matrice uguali a quelli del filtro "emboss"*/
+    set_val(emboss_filter, 0, 0, 0, -2.0);
+    set_val(emboss_filter, 0, 1, 0, -1.0);
+    set_val(emboss_filter, 0, 2, 0, 0.0);
+    set_val(emboss_filter, 1, 0, 0, -1.0);
+    set_val(emboss_filter, 2, 0, 0, 0.0);
+    set_val(emboss_filter, 2, 2, 0, 2.0);
     
     /* Aggiorniamo il vettore stats */
     compute_stats(emboss_filter);
@@ -1033,7 +1018,7 @@ ip_mat * create_emboss_filter(){
 }
 
 /* Crea un filtro medio per la rimozione del rumore */
-ip_mat * create_average_filter(unsigned int w, unsigned int h, unsigned int k){
+ip_mat * create_average_filter(int w, int h, int k){
     /* Definizione variabile che conterrà il valore medio con cui popolare la matrice filtro */
     float c;
     
@@ -1051,7 +1036,7 @@ ip_mat * create_average_filter(unsigned int w, unsigned int h, unsigned int k){
 }
 
 /* Crea un filtro gaussiano per la rimozione del rumore */
-ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, float sigma){
+ip_mat * create_gaussian_filter(int w, int h, int k, float sigma){
     /* Definizione indici che indicano le coordinate centrali del filtro */
     int cx;
     int cy;
@@ -1061,10 +1046,9 @@ ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, 
     int y;
 
     /* Definizine indici */
-    unsigned int i;
-    unsigned int j;
-    unsigned int l;
-    
+    int i;
+    int j;
+
     /* Definizione variabile per la somma */
     float sum;
 
@@ -1083,7 +1067,7 @@ ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, 
         exit(1);
     }
     
-    /* Inizializzazione della matrice filtro per ogni canale */
+    /* Inizializzazione della matrice filtro */
     gaussian_filter = ip_mat_create(w, h, k, 0.0);
     
     for(i=0; i < w; i++){
@@ -1092,10 +1076,9 @@ ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, 
         for(j=0; j < h; j++){
             /* Calcoliamo la distanza y dalla cella centrale del filtro */
             y=j-cy;
-            for(l=0; l < k; l++){
-                /*Calcoliamo il valore del filtro in base alla formula indicata nel file .pdf che illustra il progetto*/
-                gaussian_filter->data[i][j][l]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
-            }
+            
+            /*Calcoliamo il valore del filtro in base alla formula indicata nel file .pdf che illustra il progetto*/
+            gaussian_filter->data[i][j][0]= (1/(2*PI*(sigma*sigma)))*exp(-((x*x)+(y*y))/(2*(sigma*sigma)));
         }
     }
 
@@ -1104,19 +1087,15 @@ ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, 
 
     for(i = 0; i < w; i++){
         for(j = 0; j < h; j++){
-            for(l=0; l < k; l++){
             /* Sommiamo tutti i valori delle celle del filtro */
-            sum += gaussian_filter->data[i][j][l];
-            }
+            sum += gaussian_filter->data[i][j][0];
         }
     }
 
     for(i = 0; i < w; i++){
         for(j = 0; j < h; j++){
-            for(l=0; l < k; l++){
-                /* Dividiamo tutte le celle del filtro per "sum" */
-                gaussian_filter->data[i][j][l] = gaussian_filter->data[i][j][l] / sum;
-            }
+            /* Dividiamo tutte le celle del filtro per "sum" */
+            gaussian_filter->data[i][j][0] = gaussian_filter->data[i][j][0] / sum;
         }
     }
     
