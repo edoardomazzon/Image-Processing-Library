@@ -1042,7 +1042,7 @@ ip_mat * create_average_filter(unsigned int w, unsigned int h, unsigned int k){
 
     /* Calcoliamo il valore medio con cui popolare la matrice filtro */
     c = 1.0/(w*h);
-    average_filter = ip_mat_create(3, 3, k, c);
+    average_filter = ip_mat_create(h, w, k, c);
     
     /* Aggiorniamo il vettore stats */
     compute_stats(average_filter);
@@ -1104,10 +1104,8 @@ ip_mat * create_gaussian_filter(unsigned int w, unsigned int h, unsigned int k, 
 
     for(i = 0; i < w; i++){
         for(j = 0; j < h; j++){
-            for(l=0; l < k; l++){
             /* Sommiamo tutti i valori delle celle del filtro */
-            sum += gaussian_filter->data[i][j][l];
-            }
+            sum += gaussian_filter->data[i][j][0];
         }
     }
 
